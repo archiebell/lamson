@@ -251,7 +251,10 @@ def to_message(mail):
     that is canonicalized for use with the Python email API.
     """
     ctype, params = mail.content_encoding['Content-Type']
-
+    # clear the params dict if we're multipart/related, or else the to_message will fail spectacularly
+    if ctype == 'multipart/related':
+        params = {}
+        
     if not ctype:
         if mail.parts:
             ctype = 'multipart/mixed'
