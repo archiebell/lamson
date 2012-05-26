@@ -63,6 +63,7 @@ class Relay(object):
                  ssl=False, starttls=False, debug=0):
         """
         The hostname and port we're connecting to, and the debug level (default to 0).
+        If hostname is empty, lamson will attempt to deliver mail to the remote server
         Optional username and password for smtp authentication.
         If ssl is True smtplib.SMTP_SSL will be used.
         If starttls is True (and ssl False), smtp connection will be put in TLS mode.
