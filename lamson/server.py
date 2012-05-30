@@ -15,6 +15,8 @@ import traceback
 from lamson.bounce import PRIMARY_STATUS_CODES, SECONDARY_STATUS_CODES, COMBINED_STATUS_CODES
 
 
+def recipient_refused(message, error):
+    return "Could not Deliver message\r\n\r\n" + str(error) + "\r\n\r\n" + str(message)
 def undeliverable_message(raw_message, failure_type):
     """
     Used universally in this file to shove totally screwed messages
@@ -112,7 +114,13 @@ class Relay(object):
             logging.exception("Failed to connect to host %s:%d" % (hostname, self.port))
             return
 
-        relay_host.sendmail(sender, recipient, str(message))
+        try:
+            relay_host.sendmail(sender, recipient, str(message))
+        except smtplib.SMTPRecipientsRefused, e:
+            # We could potentially send the sender a message saying their message was undeliverable,
+            #  or we could call undeliverable_message.  One of these would give a user _zero_ feedback
+            #  that the message was not sent, the other is useful for applications where there is no user.
+            self.send(To=message['From'], From=message['To'], Subject="Undeliverable to " + str(message['From']), Body=recipient_refused(message, e))
         relay_host.quit()
 
     def resolve_relay_host(self, To):
