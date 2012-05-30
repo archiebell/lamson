@@ -116,16 +116,17 @@ class Relay(object):
         relay_host.quit()
 
     def resolve_relay_host(self, To):
-        import DNS
+        import dns.resolver
         address, target_host = To.split('@')
-        mx_hosts = DNS.mxlookup(target_host)
+        mx_hosts = dns.resolver.query(target_host, 'MX')
 
         if not mx_hosts:
             logging.debug("Domain %r does not have an MX record, using %r instead.", target_host, target_host)
             return target_host
         else:
-            logging.debug("Delivering to MX record %r for target %r", mx_hosts[0], target_host)
-            return mx_hosts[0][1]
+            exchange = str(mx_hosts[0].exchange)[:-1]
+            logging.debug("Delivering to MX record %r for target %r", exchange, target_host)
+            return exchange
 
 
     def __repr__(self):
