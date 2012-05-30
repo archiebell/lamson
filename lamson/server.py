@@ -107,6 +107,9 @@ class Relay(object):
         sender = From or message['From']
 
         hostname = self.hostname or self.resolve_relay_host(recipient)
+        if not hostname:
+            undeliverable_message(message, "Unresolvable recipient domain %r" % (recipient))
+            return
 
         try:
             relay_host = self.configure_relay(hostname)
@@ -126,7 +129,11 @@ class Relay(object):
     def resolve_relay_host(self, To):
         import dns.resolver
         address, target_host = To.split('@')
-        mx_hosts = dns.resolver.query(target_host, 'MX')
+        try:
+            mx_hosts = dns.resolver.query(target_host, 'MX')
+        except dns.resolver.NXDOMAIN:
+            #Going to call undeliverable_message in a second...
+            return ""
 
         if not mx_hosts:
             logging.debug("Domain %r does not have an MX record, using %r instead.", target_host, target_host)
