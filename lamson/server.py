@@ -10,6 +10,7 @@ import threading
 import socket
 import logging
 from lamson import queue, mail, routing
+from lamson.utilities import *
 import time
 import traceback
 from lamson.bounce import PRIMARY_STATUS_CODES, SECONDARY_STATUS_CODES, COMBINED_STATUS_CODES
@@ -104,11 +105,12 @@ class Relay(object):
         SMTP send lines rather than what's in the message.
         """
         recipient = To or message['To']
+        simplerecipient = simplifyEmail(recipient)
         sender = From or message['From']
 
-        hostname = self.hostname or self.resolve_relay_host(recipient)
+        hostname = self.hostname or self.resolve_relay_host(simplerecipient)
         if not hostname:
-            undeliverable_message(message, "Unresolvable recipient domain %r" % (recipient))
+            undeliverable_message(message, "Unresolvable recipient domain %r" % (simplerecipient))
             return
 
         try:
@@ -128,11 +130,7 @@ class Relay(object):
 
     def resolve_relay_host(self, To):
         import dns.resolver
-        
-        #To is in format john@exmaple.com or "John Smith <john@example.com>"
         address, target_host = To.split('@')
-        target_host = target_host.replace(">", "") 
-        
         try:
             mx_hosts = dns.resolver.query(target_host, 'MX')
         except dns.resolver.NXDOMAIN:
