@@ -128,7 +128,11 @@ class Relay(object):
 
     def resolve_relay_host(self, To):
         import dns.resolver
+        
+        #To is in format john@exmaple.com or "John Smith <john@example.com>"
         address, target_host = To.split('@')
+        target_host = target_host.replace(">", "") 
+        
         try:
             mx_hosts = dns.resolver.query(target_host, 'MX')
         except dns.resolver.NXDOMAIN:
