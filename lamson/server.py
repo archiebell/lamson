@@ -197,6 +197,12 @@ class SMTPReceiver(smtpd.SMTPServer):
         Called by smtpd.SMTPServer when there's a message received.
         """
 
+        child = threading.Thread(target=self.process_message_child,
+                            kwargs={'Peer': Peer, 'From': From, 'To': To, 
+                                    'Data': Data })
+        child.start()
+        
+    def process_message_child(self, Peer, From, To, Data):
         try:
             logging.debug("Message received from Peer: %r, From: %r, to To %r." % (Peer, From, To))
             routing.Router.deliver(mail.MailRequest(Peer, From, To, Data))
