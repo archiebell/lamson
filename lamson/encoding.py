@@ -292,7 +292,9 @@ def to_string(mail, envelope_header=False):
     """Returns a canonicalized email string you can use to send or store
     somewhere."""
     msg = to_message(mail).as_string(envelope_header)
-    assert "From nobody" not in msg
+    #We get messages from nobody when making an Undeliverable message.
+    #   We also may see this from applications we write
+    #assert "From nobody" not in msg
     return msg
 
 
