@@ -108,7 +108,7 @@ class Relay(object):
         simplerecipient = simplifyEmail(recipient)
         sender = From or message['From']
 
-        hostname = self.hostname or self.resolve_relay_host(simplerecipient)
+        hostname = self.hostname or self.resolve_relay_host_persistent(simplerecipient)
         if not hostname:
             undeliverable_message(message, "Unresolvable recipient domain %r" % (simplerecipient))
             return
@@ -128,21 +128,30 @@ class Relay(object):
             self.send(To=message['From'], From=message['To'], Subject="Undeliverable to " + str(message['From']), Body=recipient_refused(message, e))
         relay_host.quit()
 
-    def resolve_relay_host(self, To):
+    def resolve_relay_host_persistent(self, To):
+        address, domain = To.split('@')
+        
+        mxrecord = self.resolve_relay_host(domain)
+        while not mxrecord and domain.count(".") > 1:
+            domain = domain[domain.index(".") + 1 : ]
+            mxrecord = self.resolve_relay_host(domain)
+        return mxrecord
+
+    def resolve_relay_host(self, domain):
         import dns.resolver
-        address, target_host = To.split('@')
+
         try:
-            mx_hosts = dns.resolver.query(target_host, 'MX')
-        except dns.resolver.NXDOMAIN:
+            mx_hosts = dns.resolver.query(domain, 'MX')
+        except (dns.resolver.NXDOMAIN, dns.resolver.NoAnswer):
             #Going to call undeliverable_message in a second...
             return ""
 
         if not mx_hosts:
-            logging.debug("Domain %r does not have an MX record, using %r instead.", target_host, target_host)
-            return target_host
+            logging.debug("Domain %r does not have an MX record, using %r instead.", domain, domain)
+            return domain
         else:
             exchange = str(mx_hosts[0].exchange)[:-1]
-            logging.debug("Delivering to MX record %r for target %r", exchange, target_host)
+            logging.debug("Delivering to MX record %r for target %r", exchange, domain)
             return exchange
 
 
