@@ -5,8 +5,8 @@ is kind of a dumping ground, so if you find something that
 can be improved feel free to work up a patch.
 """
 
-from lamson import server, routing
-import sys, os
+from lamson import server, routing, mail
+import sys, os, time
 import logging
 import daemon
 
@@ -18,6 +18,13 @@ except:
 import imp
 import signal
 
+def mail_to_file(message, filename="", dir="logs"):
+    if not filename: filename = str(time.time())
+    path = os.path.join(dir, filename)
+    f = open(path, "w")
+    f.write(str(message))
+    f.close()
+    
 
 def import_settings(boot_also, from_dir=None, boot_module="config.boot"):
     """Used to import the settings in a Lamson project."""
