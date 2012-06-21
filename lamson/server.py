@@ -108,7 +108,7 @@ class Relay(object):
         simplerecipient = simplifyEmail(recipient)
         sender = From or message['From']
 
-        hostname = self.hostname or self.resolve_relay_host_persistent(simplerecipient)
+        hostname = self.hostname or self.resolve_relay_host(simplerecipient)
         if not hostname:
             undeliverable_message(message, "Unresolvable recipient domain %r" % (simplerecipient))
             return
@@ -128,21 +128,17 @@ class Relay(object):
             self.send(To=message['From'], From=message['To'], Subject="Undeliverable to " + str(message['From']), Body=recipient_refused(message, e))
         relay_host.quit()
 
-    def resolve_relay_host_persistent(self, To):
-        address, domain = To.split('@')
-        
-        mxrecord = self.resolve_relay_host(domain)
-        while not mxrecord and domain.count(".") > 1:
-            domain = domain[domain.index(".") + 1 : ]
-            mxrecord = self.resolve_relay_host(domain)
-        return mxrecord
-
-    def resolve_relay_host(self, domain):
+    def resolve_relay_host(self, To):
         import dns.resolver
 
+        address, domain = To.split('@')
+        
+        mx_hosts = ""
         try:
             mx_hosts = dns.resolver.query(domain, 'MX')
-        except (dns.resolver.NXDOMAIN, dns.resolver.NoAnswer):
+        except (dns.resolver.NoAnswer):
+            pass
+        except (dns.resolver.NXDOMAIN):
             #Going to call undeliverable_message in a second...
             return ""
 
@@ -150,7 +146,12 @@ class Relay(object):
             logging.debug("Domain %r does not have an MX record, using %r instead.", domain, domain)
             return domain
         else:
-            exchange = str(mx_hosts[0].exchange)[:-1]
+            priority = 0
+            exchange = str(mx_hosts[priority].exchange)[:-1]
+            while exchange.endswith('.onion') and len(mx_hosts) > (priority+1):
+                priority += 1
+                exchange = str(mx_hosts[priority].exchange)[:-1]
+                
             logging.debug("Delivering to MX record %r for target %r", exchange, domain)
             return exchange
 
