@@ -5,8 +5,8 @@ is kind of a dumping ground, so if you find something that
 can be improved feel free to work up a patch.
 """
 
-from lamson import server, routing, mail
-import sys, os, time
+from lamson import server, routing, mail, cron
+import sys, os, time, threading
 import logging
 import daemon
 
@@ -102,6 +102,11 @@ def check_for_pid(pid, force):
             os.unlink(pid)
 
 
+def startCron():
+    logging.debug("Initializing cronjob...")
+    cronTab = cron.getCronTab()
+    cronTab.run()
+            
 def start_server(pid, force, chroot, chdir, uid, gid, umask, settings_loader, debug):
     """
     Starts the server by doing a daemonize and then dropping priv
@@ -122,6 +127,9 @@ def start_server(pid, force, chroot, chdir, uid, gid, umask, settings_loader, de
         logging.warning("You probably meant to give a uid and gid, but you gave: uid=%r, gid=%r.  Will not change to any user.", uid, gid)
 
     settings.receiver.start()
+    
+    cronThread = threading.Thread(target=startCron)
+    cronThread.start()
 
     if debug:
         print "Lamson started in debug mode. ctrl-c to quit..."
